@@ -1,93 +1,89 @@
-import math
+""" K-Means.
 
+Implement K-Means algorithm with TensorFlow, and apply it to classify
+handwritten digit images. This example is using the MNIST database of
+handwritten digits as training samples (http://yann.lecun.com/exdb/mnist/).
+
+Note: This example requires TensorFlow v1.1.0 or over.
+
+Author: Aymeric Damien
+Project: https://github.com/aymericdamien/TensorFlow-Examples/
+"""
+
+from __future__ import print_function
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.contrib.factorization import KMeans
 from matplotlib import cm
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
-import numpy as np
-import pandas as pd
-from sklearn import metrics
-import tensorflow as tf
-from tensorflow.python.data import Dataset
 
+# Ignore all GPUs, tf random forest does not benefit from it.
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-dataset = pd.read_csv("data/train-less.csv", sep=",")
+# Import MNIST data
+from tensorflow.examples.tutorials.mnist import input_data
+mnist = input_data.read_data_sets("data/", one_hot=True)
+full_data_x = mnist.train.images
 
-# for i in range(9):
-#     plt.subplot(3, 3, i+1)
-#     plt.imshow(dataset.iloc[i][1:].values.reshape([28, 28]))
-# plt.show()
-# print dataset
+# Parameters
+num_steps = 50  # Total steps to train
+batch_size = 1024  # The number of samples per batch
+k = 25  # The number of clusters
+num_classes = 10  # The 10 digits
+num_features = 784  # Each image is 28x28 pixels
 
-feature_columns = [tf.feature_column.numeric_column("pixel0")]
-my_feature = dataset[['pixel0']]
+# Input images
+X = tf.placeholder(tf.float32, shape=[None, num_features])
+# Labels (for assigning a label to a centroid and testing)
+Y = tf.placeholder(tf.float32, shape=[None, num_classes])
 
-targets = dataset['label']
+# K-Means Parameters
+kmeans = KMeans(inputs=X, num_clusters=k, distance_metric='cosine', use_mini_batch=True)
 
-# Use gradient descent as the optimizer for training the model.
-my_optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.0000001)
-my_optimizer = tf.contrib.estimator.clip_gradients_by_norm(my_optimizer, 5.0)
+# Build KMeans graph
+training_graph = kmeans.training_graph()
 
-# Configure the linear regression model with our feature columns and optimizer.
-# Set a learning rate of 0.0000001 for Gradient Descent.
-linear_regressor = tf.estimator.LinearRegressor(
-    feature_columns=feature_columns,
-    optimizer=my_optimizer
-)
+(all_scores, cluster_idx, scores, cluster_centers_initialized, cluster_centers_var, init_op, train_op) = training_graph
 
+cluster_idx = cluster_idx[0] # fix for cluster_idx being a tuple
+avg_distance = tf.reduce_mean(scores)
 
-def my_input_fn(features, targets, batch_size=1, shuffle=True, num_epochs=None):
-    """Trains a linear regression model of one feature.
+# Initialize the variables (i.e. assign their default value)
+init_vars = tf.global_variables_initializer()
 
-    Args:
-      features: pandas DataFrame of features
-      targets: pandas DataFrame of targets
-      batch_size: Size of batches to be passed to the model
-      shuffle: True or False. Whether to shuffle the data.
-      num_epochs: Number of epochs for which data should be repeated. None = repeat indefinitely
-    Returns:
-      Tuple of (features, labels) for next data batch
-    """
+# Start TensorFlow session
+sess = tf.Session()
 
-    # Convert pandas data into a dict of np arrays.
-    features = {key: np.array(value) for key, value in dict(features).items()}
+# Run the initializer
+sess.run(init_vars, feed_dict={X: full_data_x})
+sess.run(init_op, feed_dict={X: full_data_x})
 
-    # Construct a dataset, and configure batching/repeating.
-    ds = Dataset.from_tensor_slices((features, targets))  # warning: 2GB limit
-    ds = ds.batch(batch_size).repeat(num_epochs)
+# Training
+for i in range(1, num_steps + 1):
+    _, d, idx = sess.run([train_op, avg_distance, cluster_idx], feed_dict={X: full_data_x})
+    if i % 10 == 0 or i == 1:
+        print("Step %i, Avg Distance: %f" % (i, d))
 
-    # Shuffle the data, if specified.
-    if shuffle:
-        ds = ds.shuffle(buffer_size=10000)
+# Assign a label to each centroid
+# Count total number of labels per centroid, using the label of each training
+# sample to their closest centroid (given by 'idx')
+counts = np.zeros(shape=(k, num_classes))
+for i in range(len(idx)):
+    counts[idx[i]] += mnist.train.labels[i]
+# Assign the most frequent label to the centroid
+labels_map = [np.argmax(c) for c in counts]
+labels_map = tf.convert_to_tensor(labels_map)
 
-    # Return the next batch of data.
-    features, labels = ds.make_one_shot_iterator().get_next()
-    return features, labels
+# Evaluation ops
+# Lookup: centroid_id -> label
+cluster_label = tf.nn.embedding_lookup(labels_map, cluster_idx)
+# Compute accuracy
+correct_prediction = tf.equal(cluster_label, tf.cast(tf.argmax(Y, 1), tf.int32))
+accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-
-_ = linear_regressor.train(
-    input_fn=lambda: my_input_fn(my_feature, targets),
-    steps=100
-)
-
-# Create an input function for predictions.
-# Note: Since we're making just one prediction for each example, we don't
-# need to repeat or shuffle the data here.
-prediction_input_fn =lambda: my_input_fn(my_feature, targets, num_epochs=1, shuffle=False)
-
-# Call predict() on the linear_regressor to make predictions.
-predictions = linear_regressor.predict(input_fn=prediction_input_fn)
-
-# Format predictions as a NumPy array, so we can calculate error metrics.
-predictions = np.array([item['predictions'][0] for item in predictions])
-
-# Print Mean Squared Error and Root Mean Squared Error.
-mean_squared_error = metrics.mean_squared_error(predictions, targets)
-root_mean_squared_error = math.sqrt(mean_squared_error)
-print "Mean Squared Error (on training data): %0.3f" % mean_squared_error
-print "Root Mean Squared Error (on training data): %0.3f" % root_mean_squared_error
-
-
-calibration_data = pd.DataFrame()
-calibration_data["predictions"] = pd.Series(predictions)
-calibration_data["targets"] = pd.Series(targets)
-print calibration_data.describe()
+# Test Model
+test_x, test_y = mnist.test.images, mnist.test.labels
+print("Test Accuracy:", sess.run(accuracy_op, feed_dict={X: test_x, Y: test_y}))
