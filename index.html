@@ -42,7 +42,7 @@
           mouse.y = e.pageY - this.offsetTop;
         }, false);
 
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 5;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#00CC99';
@@ -83,6 +83,7 @@
               .then(response => response.json()) // parse response as JSON
               .then(data => {
                   const context = canvas.getContext('2d');
+                  console.log(data.prediction);
                   context.clearRect(0, 0, canvas.width, canvas.height);
               })
               .catch(function(error) {
