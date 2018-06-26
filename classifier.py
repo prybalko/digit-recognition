@@ -38,21 +38,18 @@ class Classifier(object):
             # take regions with large enough areas
             if region.area >= 10:
                 # draw rectangle around segmented coins
-                minr, minc, maxr, maxc = region.bbox
-                width, height = maxc - minc, maxr - minr
-                rect = mpatches.Rectangle((minc, minr), width, height,
+                oy, ox, maxr, maxc = region.bbox
+                width, height = maxc - ox, maxr - oy
+                rect = mpatches.Rectangle((ox, oy), width, height,
                                           fill=False, edgecolor='green', linewidth=2)
                 ax.add_patch(rect)
-                cx, cy = region.centroid
-                dx = 10
-                arrow = mpatches.Arrow(cy - dx, cx- dx, dx, dx, width=2)
-                ax.add_patch(arrow)
+                cy, cx = region.centroid
 
-                box_size = max(width, height)
-                print width, height
-                big_rect = mpatches.Rectangle((cy-box_size/2., cx-box_size/2.), box_size, box_size,
+                half_side = max(cx-ox, width-(cx-ox), cy-oy, height-(cy-oy))
+                big_rect = mpatches.Rectangle((cx-half_side, cy-half_side), half_side*2, half_side*2,
                                               fill=False, edgecolor='red', linewidth=2)
                 ax.add_patch(big_rect)
+                ax.scatter(cx, cy, s=400, c='C0', marker='+', linewidth=2)
 
         ax.set_axis_off()
         plt.tight_layout()
