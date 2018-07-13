@@ -20,40 +20,41 @@ class Classifier(object):
         self.classifier = KNeighborsClassifier()
         self.classifier.fit(self.mnist.data[::5], self.mnist.target[::5])
 
-    def _add_padding(self, img):
-        return np.pad(img, [(4, 4), (4, 4)], mode='constant')
-
-    def _nornalize(self, img):
-        normalized_img = resize(img, (20, 20), anti_aliasing=True)
-        normalized_img *= 255. / img.max()
-        return normalized_img
-
-    def _crop_to_region(self, image, region):
-        oy, ox, maxr, maxc = (int(x) for x in region.bbox)
-        width, height = maxc - ox, maxr - oy
-        cy, cx = (int(x) for x in region.centroid)
-        half_side = int(max(cx - ox, width - (cx - ox), cy - oy, height - (cy - oy)))
-        size_size = half_side * 2
-        x = cx - half_side
-        y = cy - half_side
-        return image[y:y + size_size, x:x + size_size]
-
     def plot(self, image):
         plt.imshow(image)
         plt.show()
 
     def predict(self, image):
+        image = np.pad(image, [(50, 50), (50, 50)], mode='constant')
         thresh = threshold_otsu(image)
         bw = closing(image > thresh, square(1))
         cleared = clear_border(bw)
         label_image = label(cleared)
-        label_image = self._add_padding(label_image)
         for region in regionprops(label_image):
             if region.area >= 10:
-                cropped = self._crop_to_region(image, region)
-                img = self._nornalize(cropped)
-                img = self._add_padding(img)
-                return self.classifier.predict(img.reshape((1, 784)))[0]
+                oy, ox, maxr, maxc = (np.round(x) for x in region.bbox)
+                width, height = maxc - ox, maxr - oy
+
+                side = max(width, height)
+                dx = (side-width)/2
+                dy = (side-height)/2
+                x = ox - dx
+                y = oy - dy
+                gcy, gcx = (np.round(x) for x in region.centroid)
+                cx_proportion = (gcx - x) / float(side)
+                cy_proportion = (gcy - y) / float(side)
+                cropped = label_image[y:y + side, x:x + side]
+
+                normalized = np.interp(cropped, (cropped.min(), cropped.max()), (0, 255))
+                resized_img = resize(normalized, (20, 20), preserve_range=True, anti_aliasing=True)
+                cx = int(np.round(cx_proportion * 20))
+                cy = int(np.round(cy_proportion * 20))
+
+                result = np.zeros((28, 28))
+                pad_x = max(4 + 10 - cx, 0)
+                pad_y = max(4 + 10 - cy, 0)
+                result[pad_y:pad_y+20, pad_x:pad_x+20] = resized_img
+                return self.classifier.predict(result.reshape((1, 784)))[0]
         return -1
 
 
