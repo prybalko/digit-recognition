@@ -5,7 +5,7 @@ import cherrypy
 import numpy as np
 from PIL import Image
 
-from classifier import classifier
+import classifier
 
 
 class HelloWorld(object):
