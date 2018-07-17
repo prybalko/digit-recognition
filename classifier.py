@@ -1,5 +1,7 @@
 import os
 import pickle
+import urllib
+from shutil import copyfileobj
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,10 +10,24 @@ from skimage.measure import label, regionprops
 from skimage.morphology import closing, square
 from skimage.segmentation import clear_border
 from skimage.transform import resize
-from sklearn import datasets, svm, metrics
+from sklearn import svm, metrics
+from sklearn.datasets import get_data_home, fetch_mldata
 from sklearn.utils import shuffle
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+
+
+def fetch_mnist():
+    mnist_alternative_url = "https://github.com/amplab/datascience-sp14/raw/master/lab7/mldata/mnist-original.mat"
+    data_home = get_data_home(data_home=DIR_PATH)
+    data_home = os.path.join(data_home, 'mldata')
+    if not os.path.exists(data_home):
+        os.makedirs(data_home)
+    mnist_save_path = os.path.join(data_home, "mnist-original.mat")
+    if not os.path.exists(mnist_save_path):
+        mnist_url = urllib.urlopen(mnist_alternative_url)
+        with open(mnist_save_path, "wb") as matlab_file:
+            copyfileobj(mnist_url, matlab_file)
 
 
 def get_classifier():
@@ -19,7 +35,8 @@ def get_classifier():
     if os.path.isfile(model_file):
         with open(model_file, 'r') as f:
             return pickle.load(f)
-    mnist = datasets.fetch_mldata('MNIST original', data_home=DIR_PATH)
+    fetch_mnist()
+    mnist = fetch_mldata("MNIST original")
     images = mnist.data
     images = images / 255. * 2 - 1
     target = mnist.target
