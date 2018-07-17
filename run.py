@@ -22,7 +22,7 @@ class HelloWorld(object):
         bin_image = Image.open(io.BytesIO(base64.b64decode(img_data))).convert('L')
         original_img = np.asarray(bin_image)
         prediction = classifier.predict(original_img)
-        return {'status': 'ok', 'prediction': int(prediction)}
+        return {'status': 'ok', 'prediction': prediction}
 
 
 if __name__ == '__main__':

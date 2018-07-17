@@ -52,6 +52,8 @@ def predict(image):
     bw = closing(image > thresh, square(1))
     cleared = clear_border(bw)
     label_image = label(cleared)
+
+    results = []
     for region in regionprops(label_image):
         if region.area >= 10:
             oy, ox, maxr, maxc = (np.round(x) for x in region.bbox)
@@ -77,5 +79,5 @@ def predict(image):
             pad_y = max(4 + 10 - cy, 0)
             result[pad_y:pad_y+20, pad_x:pad_x+20] = resized_img
             result = result / 255. * 2 - 1
-            return CLASSIFIER.predict(result.reshape((1, 784)))[0]
-    return -1
+            results.append(CLASSIFIER.predict(result.reshape((1, 784)))[0])
+    return results or [-1]
