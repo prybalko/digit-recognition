@@ -1,20 +1,11 @@
-
 <!DOCTYPE HTML>
 <html>
   <head>
-    <style>
-      body {
-        padding: 0;
-      }
-        #myCanvas {
-            border: solid 3px green;
-            margin: auto;
-        }
-        #paint {
-            margin: auto;
-            width: 10%;
-        }
-    </style>
+      <title>Digit Recognition</title>
+      <link rel="icon" href="static/favicon.ico"/>
+      <link rel="stylesheet" href="static/css/base.css">
+      <script src="static/js/drawing.js" defer></script>
+      <script src="static/js/actions.js" defer></script>
   </head>
   <body>
   	<div id="paint">
@@ -23,73 +14,5 @@
             <button id="submitButton">Submit</button>
         </div>
 	</div>
-
-    <script>
-        var canvas = document.getElementById('myCanvas');
-        var ctx = canvas.getContext('2d');
-
-        var painting = document.getElementById('paint');
-        var paint_style = getComputedStyle(painting);
-        canvas.width = 100;
-        canvas.height = 100;
-        // canvas.width = parseInt(paint_style.getPropertyValue('width'));
-        // canvas.height = parseInt(paint_style.getPropertyValue('height'));
-
-        var mouse = {x: 0, y: 0};
-
-        canvas.addEventListener('mousemove', function(e) {
-          mouse.x = e.pageX - this.offsetLeft;
-          mouse.y = e.pageY - this.offsetTop;
-        }, false);
-
-        ctx.lineWidth = 4;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = '#00CC99';
-
-        canvas.addEventListener('mousedown', function(e) {
-            ctx.beginPath();
-            ctx.moveTo(mouse.x, mouse.y);
-
-            canvas.addEventListener('mousemove', onPaint, false);
-        }, false);
-
-        canvas.addEventListener('mouseup', function() {
-            canvas.removeEventListener('mousemove', onPaint, false);
-        }, false);
-
-        var onPaint = function() {
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.stroke();
-        };
-
-    </script>
-    <script>
-        document.getElementById("submitButton").onclick = function(){
-            var canvas = document.getElementById('myCanvas');
-            var dataURL = canvas.toDataURL();
-            fetch('/recognize', {
-                body: canvas.toDataURL(),
-                method: 'POST',
-            })
-              .then(response => {
-                if (response.ok) {
-                  return Promise.resolve(response);
-                }
-                else {
-                  return Promise.reject(new Error('Failed to load'));
-                }
-              })
-              .then(response => response.json()) // parse response as JSON
-              .then(data => {
-                  const context = canvas.getContext('2d');
-                  console.log(data.prediction);
-                  context.clearRect(0, 0, canvas.width, canvas.height);
-              })
-              .catch(function(error) {
-                console.log(`Error: ${error.message}`);
-              });
-        };
-    </script>
   </body>
 </html>

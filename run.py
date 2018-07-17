@@ -26,4 +26,4 @@ class HelloWorld(object):
 
 
 if __name__ == '__main__':
-    cherrypy.quickstart(HelloWorld())
+    cherrypy.quickstart(HelloWorld(), config='config.ini')

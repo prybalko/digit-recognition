@@ -1,0 +1,13 @@
+body {
+    padding: 0;
+}
+
+#myCanvas {
+    border: solid 3px green;
+    margin: auto;
+}
+
+#paint {
+    margin: auto;
+    width: 10%;
+}
