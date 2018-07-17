@@ -17,9 +17,9 @@ from sklearn.utils import shuffle
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
-def fetch_mnist():
+def fetch_mnist(data_home=None):
     mnist_alternative_url = "https://github.com/amplab/datascience-sp14/raw/master/lab7/mldata/mnist-original.mat"
-    data_home = get_data_home(data_home=DIR_PATH)
+    data_home = get_data_home(data_home=data_home)
     data_home = os.path.join(data_home, 'mldata')
     if not os.path.exists(data_home):
         os.makedirs(data_home)
@@ -35,8 +35,8 @@ def get_classifier():
     if os.path.isfile(model_file):
         with open(model_file, 'r') as f:
             return pickle.load(f)
-    fetch_mnist()
-    mnist = fetch_mldata("MNIST original")
+    fetch_mnist(data_home=DIR_PATH)
+    mnist = fetch_mldata("MNIST original", data_home=DIR_PATH)
     images = mnist.data
     images = images / 255. * 2 - 1
     target = mnist.target
