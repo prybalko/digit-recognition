@@ -3,7 +3,6 @@ import pickle
 import urllib
 from shutil import copyfileobj
 
-import matplotlib.pyplot as plt
 import numpy as np
 from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops
@@ -41,17 +40,17 @@ def get_classifier():
     images = images / 255. * 2 - 1
     target = mnist.target
 
-    images, target = shuffle(images, target)
-    n_samples = len(images)
+    images, target = shuffle(images, target, random_state=0)
+    n_train_samples = len(images) / 10 * 8
     data = images
     # Create a classifier: a support vector classifier
     classifier = svm.SVC()
     # We learn the digits on the first half of the digits
-    classifier.fit(data[:n_samples // 2], target[:n_samples // 2])
+    classifier.fit(data[:n_train_samples], target[:n_train_samples])
 
     # Now predict the value of the digit on the second half:
-    expected = target[n_samples // 2:]
-    predicted = classifier.predict(data[n_samples // 2:])
+    expected = target[n_train_samples:]
+    predicted = classifier.predict(data[n_train_samples:])
 
     print("Classification report for classifier %s:\n%s\n"
           % (classifier, metrics.classification_report(expected, predicted)))
